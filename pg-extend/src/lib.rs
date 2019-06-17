@@ -17,6 +17,7 @@ pub mod pg_datum;
 pub mod pg_error;
 pub mod pg_sys;
 pub mod pg_type;
+pub mod pg_logger;
 #[cfg(not(feature = "postgres-9"))]
 pub mod pg_fdw;
 
@@ -37,7 +38,7 @@ macro_rules! pg_magic {
         #[allow(unused)]
         #[link_name = "Pg_magic_func"]
         pub extern "C" fn Pg_magic_func() -> &'static pg_extend::pg_sys::Pg_magic_struct {
-            use pg_extend::{pg_sys, register_panic_handler};
+            use pg_extend::pg_sys;
             use std::mem::size_of;
             use std::os::raw::c_int;
 
@@ -51,12 +52,18 @@ macro_rules! pg_magic {
                 float8byval: pg_sys::USE_FLOAT8_BYVAL as c_int,
             };
 
-            // TODO: is this a good idea here?
-            // register panic_handler
-            register_panic_handler();
-
             // return the magic
             &my_magic
+        }
+
+        #[no_mangle]
+        #[allow(non_snake_case)]
+        #[link_name = "_PG_init"]
+        pub extern "C" fn _PG_init() {
+            // use pg_extend::{pg_logger};
+            use pg_extend::init_pg_extend;
+
+            init_pg_extend();
         }
     };
 }
@@ -76,8 +83,17 @@ pub fn get_args<'a>(
     (args, args_null)
 }
 
+/// Performs initialization for pg-extend-rs
+pub fn init_pg_extend() {
+    // initialize logging
+    pg_logger::init();
+
+    // register panic_handler
+    register_panic_handler();
+}
+
 /// This will replace the current panic_handler
-pub fn register_panic_handler() {
+fn register_panic_handler() {
     use std::panic;
 
     // set (and replace the existing) panic handler, this will tell Postgres that the call failed

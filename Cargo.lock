@@ -798,6 +798,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "logging"
+version = "0.1.0"
+dependencies = [
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pg-extend 0.2.1",
+ "pg-extern-attr 0.2.2",
+]
+
+[[package]]
 name = "matches"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -950,6 +959,7 @@ version = "0.2.1"
 dependencies = [
  "bindgen 0.48.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "clang 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

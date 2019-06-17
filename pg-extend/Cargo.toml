@@ -26,6 +26,7 @@ postgres-11 = []
 pg_allocator = []
 
 [dependencies]
+log = "0.4.6"
 
 [build-dependencies]
 bindgen = "0.48"
