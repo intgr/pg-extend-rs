@@ -1,6 +1,8 @@
 sudo: required
 dist: xenial
 language: rust
+# TODO! READ https://levans.fr/rust_travis_cache.html
+cache: cargo
 
 addons:
   postgresql: "10"
