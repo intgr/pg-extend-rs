@@ -10,9 +10,9 @@
 extern crate proc_macro;
 extern crate proc_macro2;
 #[macro_use]
-extern crate syn;
-#[macro_use]
 extern crate quote;
+#[macro_use]
+extern crate syn;
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
@@ -361,8 +361,8 @@ fn impl_info_for_fn(item: &syn::Item) -> TokenStream {
 /// extern crate pg_extend;
 /// use pg_extend::pg_sys;
 ///
-///  #[no_mangle]
-///  pub extern "C" fn pg_add_one(func_call_info: pg_sys::FunctionCallInfo) -> pg_sys::Datum
+/// #[no_mangle]
+/// pub extern "C" fn pg_add_one(func_call_info: pg_sys::FunctionCallInfo) -> pg_sys::Datum
 /// # {
 /// # unimplemented!()
 /// # }
