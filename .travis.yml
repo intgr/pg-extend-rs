@@ -1,7 +1,7 @@
 sudo: required
 dist: xenial
 language: rust
-# TODO! Read https://levans.fr/rust_travis_cache.html
+# TODO: Read https://levans.fr/rust_travis_cache.html
 cache: cargo
 
 addons:
