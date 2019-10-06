@@ -1,0 +1,2 @@
+rustfmt "$(/bin/ls -1 -t target/*/*/*/out/postgres.rs |head -1)" --emit stdout > pg-extend/src/postgres.rs
+

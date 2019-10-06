@@ -8,7 +8,7 @@
 
 // FDW on PostgreSQL 11+ is not supported. :(
 // If anyone tries to enable "fdw" feature with newer Postgres, throw error.
-#[cfg(feature = "postgres-11")]
+#[cfg(any(feature = "postgres-11", feture = "postgres-12"))]
 compile_error!("pg-extend-rs does not support FDW on PostgreSQL 11 or newer. See https://github.com/bluejekyll/pg-extend-rs/issues/49");
 
 use std::boxed::Box;
@@ -68,7 +68,11 @@ pub trait ForeignData: Iterator<Item = Box<dyn ForeignRow>> {
     /// specified by index_columns. Do not assume columns present in indices
     /// were present in the UPDATE statement.
     /// Returns the updated row, or None if no update occured.
-    fn update<'mc>(&self, _new_row: &Tuple<'mc>, _indices: &Tuple<'mc>) -> Option<Box<dyn ForeignRow>> {
+    fn update<'mc>(
+        &self,
+        _new_row: &Tuple<'mc>,
+        _indices: &Tuple<'mc>,
+    ) -> Option<Box<dyn ForeignRow>> {
         error!("Table does not support update");
         None
     }
@@ -260,6 +264,7 @@ impl<T: ForeignData> ForeignWrapper<T> {
 
         for i in 0..(attrs.len().min(data.len())) {
             let name = Self::name_to_string(unsafe { (*attrs[i]).attname });
+            // FIXME broken!
             let data = unsafe { pg_datum::PgDatum::from_raw(memory_context, data[i], isnull[i]) };
             t.insert(name, data);
         }

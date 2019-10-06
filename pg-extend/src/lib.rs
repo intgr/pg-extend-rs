@@ -13,6 +13,8 @@ use std::os::raw::c_int;
 use std::sync::atomic::compiler_fence;
 use std::sync::atomic::Ordering;
 
+use crate::pg_datum::PgDatum;
+
 pub mod pg_alloc;
 pub mod pg_sys;
 #[macro_use]
@@ -60,21 +62,43 @@ macro_rules! pg_magic {
     };
 }
 
-/// Returns the slice of Datums, and a parallel slice which specifies if the Datum passed in is (SQL) NULL
+#[cfg(feature = "postgres-12")]
+type FunctionCallInfoData = pg_sys::FunctionCallInfoBaseData;
+#[cfg(not(feature = "postgres-12"))]
+type FunctionCallInfoData = pg_sys::FunctionCallInfoData;
+
+/// Returns an iterator of argument Datums
 pub fn get_args<'a>(
-    func_call_info: &'a pg_sys::FunctionCallInfoData,
-) -> (
-    impl 'a + Iterator<Item = &pg_sys::Datum>,
-    impl 'a + Iterator<Item = pg_bool::Bool>,
-) {
+    func_call_info: &'a FunctionCallInfoData,
+) -> impl 'a + Iterator<Item = Option<pg_sys::Datum>> {
     let num_args = func_call_info.nargs as usize;
 
-    let args = func_call_info.arg[..num_args].iter();
-    let args_null = func_call_info.argnull[..num_args]
+    // PostgreSQL 12+: Convert from pg_sys::NullableDatum
+    #[cfg(feature = "postgres-12")]
+    return unsafe { func_call_info.args.as_slice(num_args) }
         .iter()
-        .map(|b| pg_bool::Bool::from(*b));
+        .map(|nullable| {
+            if nullable.isnull {
+                None
+            } else {
+                Some(nullable.value)
+            }
+        });
 
-    (args, args_null)
+    // Older versions store two separate arrays for 'isnull' and datums
+    #[cfg(not(feature = "postgres-12"))]
+    return {
+        let args = &func_call_info.arg[..num_args];
+        let args_null = &func_call_info.argnull[..num_args];
+
+        args.iter().zip(args_null.iter()).map(|(value, isnull)| {
+            if pg_bool::Bool::from(*isnull).into() {
+                None
+            } else {
+                Some(*value)
+            }
+        })
+    };
 }
 
 /// Information for a longjmp

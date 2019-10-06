@@ -108,14 +108,11 @@ fn extract_arg_data(arg_types: &[Type]) -> (TokenStream, HasPgAllocatorArg) {
         let arg_error = format!("unsupported function argument type for {}", arg_name);
 
         let get_arg = quote_spanned!( arg_type.span()=>
+            let datum = args.next().expect("wrong number of args passed into get_args for args?");
             let #arg_name: #arg_type = unsafe {
                 pg_extend::pg_datum::TryFromPgDatum::try_from(
                     &memory_context,
-                    pg_extend::pg_datum::PgDatum::from_raw(
-                        &memory_context,
-                        *args.next().expect("wrong number of args passed into get_args for args?"),
-                        args_null.next().expect("wrong number of args passed into get_args for args_null?")
-                    ),
+                    pg_extend::pg_datum::PgDatum::from_raw(&memory_context, datum),
                 )
                 .expect(#arg_error)
             };
@@ -344,7 +341,7 @@ fn impl_info_for_fn(item: &syn::Item) -> TokenStream {
             // All params will be in the "current" memory context at the call-site
             let memory_context = PgAllocator::current_context();
 
-            let func_info: &mut pg_extend::pg_sys::FunctionCallInfoData = unsafe {
+            let func_info = unsafe {
                 func_call_info
                     .as_mut()
                     .expect("func_call_info was unexpectedly NULL")
@@ -353,7 +350,7 @@ fn impl_info_for_fn(item: &syn::Item) -> TokenStream {
             // guard the Postgres process against the panic, and give us an oportunity to cleanup
             let panic_result = panic::catch_unwind(|| {
                 // extract the argument list
-                let (mut args, mut args_null) = pg_extend::get_args(func_info);
+                let mut args = pg_extend::get_args(func_info);
 
                 // arbitrary Datum conversions occur here, and could panic
                 //   so this is inside the catch unwind

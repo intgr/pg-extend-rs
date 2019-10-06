@@ -13,7 +13,6 @@ use std::ptr::NonNull;
 
 use crate::native::Text;
 use crate::pg_alloc::{PgAllocated, PgAllocator};
-use crate::pg_bool;
 use crate::pg_sys::{self, Datum};
 
 /// A wrapper type for Postgres Datum's.
@@ -25,13 +24,10 @@ pub struct PgDatum<'mc>(Option<Datum>, PhantomData<NonNull<&'mc PgAllocator>>);
 
 impl<'mc> PgDatum<'mc> {
     /// Returns a new PgDatum wrapper for Datatypes used by Postgres.
-    pub unsafe fn from_raw<B: Into<pg_bool::Bool>>(
+    pub unsafe fn from_raw(
         _memory_context: &'mc PgAllocator,
-        datum: Datum,
-        is_null: B,
+        datum: Option<Datum>,
     ) -> PgDatum<'mc> {
-        let is_null: pg_bool::Bool = is_null.into();
-        let datum = if is_null.into() { None } else { Some(datum) };
         PgDatum(datum, PhantomData)
     }
 
