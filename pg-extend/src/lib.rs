@@ -13,6 +13,7 @@ use std::os::raw::c_int;
 use std::sync::atomic::compiler_fence;
 use std::sync::atomic::Ordering;
 
+use crate::pg_alloc::PgAllocator;
 use crate::pg_datum::PgDatum;
 
 pub mod pg_alloc;
@@ -69,21 +70,16 @@ type FunctionCallInfoData = pg_sys::FunctionCallInfoData;
 
 /// Returns an iterator of argument Datums
 pub fn get_args<'a>(
+    memory_context: &'a PgAllocator,
     func_call_info: &'a FunctionCallInfoData,
-) -> impl 'a + Iterator<Item = Option<pg_sys::Datum>> {
+) -> impl 'a + Iterator<Item = PgDatum<'a>> {
     let num_args = func_call_info.nargs as usize;
 
     // PostgreSQL 12+: Convert from pg_sys::NullableDatum
     #[cfg(feature = "postgres-12")]
     return unsafe { func_call_info.args.as_slice(num_args) }
         .iter()
-        .map(|nullable| {
-            if nullable.isnull {
-                None
-            } else {
-                Some(nullable.value)
-            }
-        });
+        .map(|datum| unsafe { PgDatum::from_raw(memory_context, datum.value, datum.isnull) });
 
     // Older versions store two separate arrays for 'isnull' and datums
     #[cfg(not(feature = "postgres-12"))]

@@ -10,11 +10,9 @@
 extern crate proc_macro;
 extern crate proc_macro2;
 #[macro_use]
-extern crate syn;
-#[macro_use]
 extern crate quote;
-
-mod lifetime;
+#[macro_use]
+extern crate syn;
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::ToTokens;
@@ -22,6 +20,8 @@ use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::token::Comma;
 use syn::Type;
+
+mod lifetime;
 
 /// A type that represents that PgAllocator is an argument to the Rust function.
 type HasPgAllocatorArg = bool;
@@ -112,7 +112,7 @@ fn extract_arg_data(arg_types: &[Type]) -> (TokenStream, HasPgAllocatorArg) {
             let #arg_name: #arg_type = unsafe {
                 pg_extend::pg_datum::TryFromPgDatum::try_from(
                     &memory_context,
-                    pg_extend::pg_datum::PgDatum::from_raw(&memory_context, datum),
+                    datum,
                 )
                 .expect(#arg_error)
             };
@@ -350,7 +350,7 @@ fn impl_info_for_fn(item: &syn::Item) -> TokenStream {
             // guard the Postgres process against the panic, and give us an oportunity to cleanup
             let panic_result = panic::catch_unwind(|| {
                 // extract the argument list
-                let mut args = pg_extend::get_args(func_info);
+                let mut args = pg_extend::get_args(&memory_context, func_info);
 
                 // arbitrary Datum conversions occur here, and could panic
                 //   so this is inside the catch unwind
